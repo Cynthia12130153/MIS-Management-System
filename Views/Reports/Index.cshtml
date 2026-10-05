@@ -1,0 +1,139 @@
+@model MIS期末.Models.ViewModels.ReportViewModel
+@{ ViewData["Title"] = "銷售報表"; }
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-auto">
+                <label class="form-label mb-0 small fw-semibold">起始日期</label>
+                <input type="date" name="startDate" value="@Model.StartDate.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+            </div>
+            <div class="col-auto">
+                <label class="form-label mb-0 small fw-semibold">結束日期</label>
+                <input type="date" name="endDate" value="@Model.EndDate.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+            </div>
+            <div class="col-auto mt-3">
+                <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search me-1"></i>查詢</button>
+            </div>
+            <div class="col-auto mt-3">
+                <a asp-action="Index" class="btn btn-outline-secondary btn-sm">近30天</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card text-center py-3">
+            <div class="text-muted small">總營業額</div>
+            <div class="fw-bold fs-2 text-success">NT$@Model.TotalRevenue.ToString("N0")</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center py-3">
+            <div class="text-muted small">訂單數</div>
+            <div class="fw-bold fs-2">@Model.TotalOrders</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center py-3">
+            <div class="text-muted small">平均客單價</div>
+            <div class="fw-bold fs-2">NT$@Model.AverageOrderValue.ToString("N0")</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-bar-chart me-2 text-primary"></i>每日營業額</div>
+            <div class="card-body">
+                <canvas id="dailyChart" height="120"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-pie-chart me-2 text-warning"></i>付款方式</div>
+            <div class="card-body">
+                <canvas id="payChart" height="180"></canvas>
+                <table class="table table-sm mt-2 mb-0">
+                    @foreach (var p in Model.PaymentMethods)
+                    {
+                        <tr>
+                            <td>@p.Method</td>
+                            <td>@p.Count 筆</td>
+                            <td class="text-success">NT$@p.Amount.ToString("N0")</td>
+                        </tr>
+                    }
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header"><i class="bi bi-trophy me-2 text-warning"></i>商品銷售排行</div>
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th class="px-3">排名</th>
+                    <th>商品名稱</th>
+                    <th>銷售數量</th>
+                    <th>銷售金額</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var (item, i) in Model.TopProducts.Select((x, i) => (x, i)))
+                {
+                    <tr>
+                        <td class="px-3">
+                            @if (i == 0) { <span class="badge bg-warning text-dark fs-6">🥇 1</span> }
+                            else if (i == 1) { <span class="badge bg-secondary fs-6">🥈 2</span> }
+                            else if (i == 2) { <span class="badge bg-warning text-dark fs-6" style="background:#cd7f32!important">🥉 3</span> }
+                            else { <span class="text-muted">@(i+1)</span> }
+                        </td>
+                        <td class="fw-semibold">@item.ProductName</td>
+                        <td>@item.TotalQty 件</td>
+                        <td class="fw-bold text-success">NT$@item.TotalRevenue.ToString("N0")</td>
+                    </tr>
+                }
+                @if (!Model.TopProducts.Any())
+                {
+                    <tr><td colspan="4" class="text-center text-muted py-4">無銷售紀錄</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+const dailyLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.DailySales.Select(x => x.Date)));
+const dailyData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.DailySales.Select(x => x.Revenue)));
+new Chart(document.getElementById('dailyChart'), {
+    type: 'bar',
+    data: {
+        labels: dailyLabels,
+        datasets: [{ label: '營業額', data: dailyData, backgroundColor: 'rgba(25,118,210,0.7)', borderRadius: 4 }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { callback: v => 'NT$' + v.toLocaleString() } } }
+    }
+});
+
+const payLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PaymentMethods.Select(x => x.Method)));
+const payData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PaymentMethods.Select(x => x.Amount)));
+new Chart(document.getElementById('payChart'), {
+    type: 'doughnut',
+    data: {
+        labels: payLabels,
+        datasets: [{ data: payData, backgroundColor: ['#1976d2','#388e3c','#f57c00','#7b1fa2'] }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+});
+</script>
+}

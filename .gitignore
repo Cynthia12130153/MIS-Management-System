@@ -1,0 +1,14 @@
+## ASP.NET Core
+bin/
+obj/
+.vs/
+*.user
+appsettings.Development.json
+
+## Database
+*.mdf
+*.ldf
+
+## Logs
+logs/
+*.log

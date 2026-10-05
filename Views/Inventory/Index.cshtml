@@ -1,0 +1,63 @@
+@model IEnumerable<MIS期末.Models.Product>
+@{ ViewData["Title"] = "庫存管理"; }
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <div class="d-flex gap-2 align-items-center">
+            <a asp-action="Index" class="btn btn-sm @(ViewBag.Filter == null ? "btn-primary" : "btn-outline-secondary")">全部商品</a>
+            <a asp-action="Index" asp-route-filter="low" class="btn btn-sm @(ViewBag.Filter == "low" ? "btn-danger" : "btn-outline-danger")">
+                <i class="bi bi-exclamation-triangle me-1"></i>庫存不足
+                <span class="badge bg-white text-danger ms-1">@Model.Count(p => p.Stock <= p.LowStockThreshold)</span>
+            </a>
+            <span class="text-muted small ms-2">共 @Model.Count() 項商品</span>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th class="px-3">商品名稱</th>
+                    <th>分類</th>
+                    <th>目前庫存</th>
+                    <th>警戒值</th>
+                    <th>庫存狀態</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model)
+                {
+                    var pct = p.LowStockThreshold > 0 ? Math.Min(100, p.Stock * 100 / (p.LowStockThreshold * 3)) : 100;
+                    var color = p.Stock <= p.LowStockThreshold ? "danger" : p.Stock <= p.LowStockThreshold * 2 ? "warning" : "success";
+                    <tr>
+                        <td class="px-3 fw-semibold">@p.Name</td>
+                        <td><span class="badge bg-light text-dark">@p.Category?.Name</span></td>
+                        <td>
+                            @if (p.Stock <= p.LowStockThreshold)
+                            {
+                                <span class="fw-bold text-danger fs-5">@p.Stock</span>
+                            }
+                            else
+                            {
+                                <span class="fw-bold">@p.Stock</span>
+                            }
+                        </td>
+                        <td class="text-muted">@p.LowStockThreshold</td>
+                        <td style="min-width:150px">
+                            <div class="progress" style="height:8px">
+                                <div class="progress-bar bg-@color" style="width:@pct%"></div>
+                            </div>
+                        </td>
+                        <td>
+                            <a asp-action="Restock" asp-route-id="@p.ProductID" class="btn btn-warning btn-sm"><i class="bi bi-arrow-up-circle me-1"></i>調整</a>
+                            <a asp-action="History" asp-route-id="@p.ProductID" class="btn btn-outline-secondary btn-sm"><i class="bi bi-clock-history"></i></a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

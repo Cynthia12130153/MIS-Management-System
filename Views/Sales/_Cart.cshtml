@@ -1,0 +1,98 @@
+@model List<MIS期末.Models.ViewModels.CartItem>
+@{
+    var cart = Model;
+    var total = cart.Sum(c => c.SubTotal);
+}
+
+<div class="card-header d-flex justify-content-between align-items-center">
+    <span>
+        <i class="bi bi-cart3 me-2"></i>購物車
+        @if (cart.Any())
+        {
+            <span class="badge bg-primary ms-1">@cart.Sum(c => c.Quantity)</span>
+        }
+    </span>
+    <button class="btn btn-outline-danger btn-sm" type="button"
+            onclick="cartPost('/Sales/ClearCart',{},'確定清空購物車？')">
+        <i class="bi bi-trash me-1"></i>清空
+    </button>
+</div>
+
+<div class="card-body p-0">
+    <div style="max-height:420px;overflow-y:auto">
+        @if (!cart.Any())
+        {
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-cart-x" style="font-size:2.5rem"></i>
+                <div class="mt-2">購物車是空的</div>
+            </div>
+        }
+        else
+        {
+            foreach (var item in cart)
+            {
+                var qtyMinus = item.Quantity - 1;
+                var qtyPlus = item.Quantity + 1;
+
+                <div class="border-bottom px-3 py-2 d-flex align-items-center gap-2">
+                    <div class="flex-grow-1 overflow-hidden">
+                        <div class="small fw-semibold text-truncate">@item.ProductName</div>
+                        <div class="text-muted" style="font-size:.75rem">NT$@item.Price.ToString("N0") / 個</div>
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        @if (item.Quantity <= 1)
+                        {
+                            <button class="btn btn-outline-danger btn-sm px-2" type="button"
+                                    onclick="cartPost('/Sales/RemoveFromCart',{productId:@item.ProductID})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-outline-secondary btn-sm px-2" type="button"
+                                    onclick="cartPost('/Sales/UpdateCart',{productId:@item.ProductID,qty:@qtyMinus})">
+                                −
+                            </button>
+                        }
+
+                        <span class="fw-bold px-1" style="min-width:28px;text-align:center">@item.Quantity</span>
+
+                        <button class="btn btn-outline-secondary btn-sm px-2" type="button"
+                                onclick="cartPost('/Sales/UpdateCart',{productId:@item.ProductID,qty:@qtyPlus})">
+                            ＋
+                        </button>
+                    </div>
+                    <div class="fw-bold text-success text-nowrap"
+                         style="min-width:70px;text-align:right">
+                        NT$@item.SubTotal.ToString("N0")
+                    </div>
+                    <button class="btn btn-sm btn-outline-danger" type="button"
+                            onclick="cartPost('/Sales/RemoveFromCart',{productId:@item.ProductID})">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+<div class="card-footer">
+    <div class="d-flex justify-content-between fw-bold fs-5 mb-3">
+        <span>合計</span>
+        <span class="text-success">NT$@total.ToString("N0")</span>
+    </div>
+
+    @if (cart.Any())
+    {
+        <button type="button" class="btn btn-primary w-100 btn-lg"
+                onclick="window.location.href='/Sales/Checkout'">
+            <i class="bi bi-credit-card me-2"></i>前往結帳
+        </button>
+    }
+    else
+    {
+        <button type="button" class="btn btn-secondary w-100 btn-lg" disabled>
+            <i class="bi bi-credit-card me-2"></i>前往結帳
+        </button>
+    }
+</div>

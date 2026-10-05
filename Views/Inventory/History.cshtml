@@ -1,0 +1,46 @@
+@model IEnumerable<MIS期末.Models.StockRecord>
+@{ ViewData["Title"] = "庫存異動紀錄"; var product = ViewBag.Product as MIS期末.Models.Product; }
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h6 class="mb-0">@product?.Name 的庫存紀錄</h6>
+    <div>
+        <a asp-action="Restock" asp-route-id="@product?.ProductID" class="btn btn-warning btn-sm">調整庫存</a>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm ms-1">返回列表</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th class="px-3">時間</th>
+                    <th>類型</th>
+                    <th>數量</th>
+                    <th>備註</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model)
+                {
+                    <tr>
+                        <td class="px-3">@r.CreatedAt.ToString("yyyy/MM/dd HH:mm")</td>
+                        <td>
+                            <span class="badge @(r.Type=="In"?"bg-success":r.Type=="Out"?"bg-danger":"bg-warning text-dark")">
+                                @(r.Type == "In" ? "進貨" : r.Type == "Out" ? "出貨" : "盤點")
+                            </span>
+                        </td>
+                        <td class="@(r.Type=="Out"?"text-danger":"text-success") fw-bold">
+                            @(r.Type == "Out" ? $"-{r.Quantity}" : $"+{r.Quantity}")
+                        </td>
+                        <td class="text-muted">@r.Notes</td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="4" class="text-center text-muted py-4">無異動紀錄</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

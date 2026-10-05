@@ -1,0 +1,161 @@
+@model MIS期末.Models.Order
+@{ ViewData["Title"] = $"訂單 #{Model.OrderID}"; }
+
+<div class="row g-3">
+    <!-- 左側：商品明細 -->
+    <div class="col-md-8">
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-receipt me-2"></i>訂單 #@Model.OrderID</span>
+                <span class="badge fs-6 @(Model.Status == "完成" ? "bg-success" : Model.Status == "已取消" ? "bg-danger" : "bg-secondary")">
+                    @Model.Status
+                </span>
+            </div>
+            <div class="card-body p-0">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th class="px-3">商品</th>
+                            <th class="text-center">數量</th>
+                            <th class="text-end">單價</th>
+                            <th class="text-end px-3">小計</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var d in Model.OrderDetails)
+                        {
+                            <tr>
+                                <td class="px-3 fw-semibold">@d.Product?.Name</td>
+                                <td class="text-center">@d.Quantity</td>
+                                <td class="text-end">NT$@d.UnitPrice.ToString("N0")</td>
+                                <td class="text-end px-3 fw-bold text-success">NT$@d.SubTotal.ToString("N0")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr>
+                            <td colspan="3" class="px-3 text-end text-muted">商品合計</td>
+                            <td class="text-end px-3 fw-bold">NT$@Model.TotalAmount.ToString("N0")</td>
+                        </tr>
+                        @if (Model.DiscountAmount > 0)
+                        {
+                            <tr class="text-danger">
+                                <td colspan="3" class="px-3 text-end">折扣優惠</td>
+                                <td class="text-end px-3 fw-bold">-NT$@Model.DiscountAmount.ToString("N0")</td>
+                            </tr>
+                        }
+                        <tr class="fw-bold fs-5">
+                            <td colspan="3" class="px-3 text-end">實付金額</td>
+                            <td class="text-end px-3 text-success">NT$@Model.FinalAmount.ToString("N0")</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右側：訂單資訊 + 會員 + 操作 -->
+    <div class="col-md-4">
+        <!-- 訂單資訊 -->
+        <div class="card mb-3">
+            <div class="card-header"><i class="bi bi-info-circle me-2"></i>訂單資訊</div>
+            <div class="card-body p-0">
+                <table class="table table-borderless table-sm mb-0 px-2">
+                    <tr>
+                        <th class="text-muted ps-3" style="width:80px">訂單編號</th>
+                        <td class="pe-3">#@Model.OrderID</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted ps-3">日期</th>
+                        <td class="pe-3">@Model.OrderDate.ToString("yyyy/MM/dd HH:mm")</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted ps-3">付款方式</th>
+                        <td class="pe-3">
+                            @{
+                                var payIcon = Model.PaymentMethod switch {
+                                    "信用卡" => "bi-credit-card",
+                                    "行動支付" => "bi-phone",
+                                    _ => "bi-cash"
+                                };
+                            }
+                            <i class="bi @payIcon me-1"></i>@Model.PaymentMethod
+                        </td>
+                    </tr>
+                    @if (!string.IsNullOrEmpty(Model.Notes))
+                    {
+                        <tr>
+                            <th class="text-muted ps-3">備註</th>
+                            <td class="pe-3">@Model.Notes</td>
+                        </tr>
+                    }
+                </table>
+            </div>
+        </div>
+
+        <!-- 會員資訊 -->
+        @if (Model.Customer != null)
+        {
+            <div class="card mb-3">
+                <div class="card-header"><i class="bi bi-person me-2"></i>會員資訊</div>
+                <div class="card-body p-0">
+                    <table class="table table-borderless table-sm mb-0 px-2">
+                        <tr>
+                            <th class="text-muted ps-3" style="width:80px">姓名</th>
+                            <td class="pe-3">@Model.Customer.Name</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted ps-3">手機</th>
+                            <td class="pe-3">@Model.Customer.Phone</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted ps-3">等級</th>
+                            <td class="pe-3">
+                                <span class="badge bg-warning text-dark">@Model.Customer.Level?.Name</span>
+                            </td>
+                        </tr>
+                        @if (Model.PointsEarned > 0)
+                        {
+                            <tr>
+                                <th class="text-muted ps-3">獲得點數</th>
+                                <td class="pe-3 text-primary fw-bold">+@Model.PointsEarned 點</td>
+                            </tr>
+                        }
+                        @if (Model.PointsRedeemed > 0)
+                        {
+                            <tr>
+                                <th class="text-muted ps-3">折抵點數</th>
+                                <td class="pe-3 text-danger fw-bold">-@Model.PointsRedeemed 點</td>
+                            </tr>
+                        }
+                    </table>
+                </div>
+                <div class="card-footer bg-transparent pt-0 pb-2 px-3">
+                    <a asp-controller="Customers" asp-action="Details" asp-route-id="@Model.CustomerID"
+                       class="btn btn-outline-primary btn-sm w-100">
+                        <i class="bi bi-person me-1"></i>查看會員資料
+                    </a>
+                </div>
+            </div>
+        }
+
+        <!-- 操作按鈕 -->
+        <div class="d-flex flex-column gap-2">
+            <a asp-controller="Sales" asp-action="Index" class="btn btn-primary">
+                <i class="bi bi-cart-plus me-1"></i>繼續銷售
+            </a>
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="bi bi-list-ul me-1"></i>返回訂單列表
+            </a>
+            @if (Model.Status == "完成")
+            {
+                <form asp-action="Cancel" asp-route-id="@Model.OrderID" method="post"
+                      onsubmit="return confirm('確定取消此訂單？庫存及點數將恢復。')">
+                    <button type="submit" class="btn btn-outline-danger w-100">
+                        <i class="bi bi-x-circle me-1"></i>取消訂單
+                    </button>
+                </form>
+            }
+        </div>
+    </div>
+</div>

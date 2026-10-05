@@ -1,0 +1,71 @@
+@model MIS期末.Models.Product
+@{ ViewData["Title"] = "商品詳情"; }
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between">
+                <span><i class="bi bi-box-seam me-2"></i>@Model.Name</span>
+                <div>
+                    <a asp-action="Edit" asp-route-id="@Model.ProductID" class="btn btn-primary btn-sm">編輯</a>
+                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm ms-1">返回</a>
+                </div>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless mb-0">
+                    <tr><th class="text-muted" width="130">分類</th><td>@Model.Category?.Name</td></tr>
+                    <tr><th class="text-muted">售價</th><td class="fw-bold text-success">NT$@Model.Price.ToString("N0")</td></tr>
+                    <tr><th class="text-muted">成本</th><td>NT$@Model.Cost.ToString("N0")</td></tr>
+                    <tr><th class="text-muted">毛利率</th><td>@(Model.Price > 0 ? $"{((Model.Price - Model.Cost) / Model.Price * 100):F1}%" : "-")</td></tr>
+                    <tr><th class="text-muted">庫存</th>
+                        <td>
+                            @if (Model.Stock <= Model.LowStockThreshold)
+                            {
+                                <span class="badge bg-danger fs-6">@Model.Stock <i class="bi bi-exclamation-triangle ms-1"></i></span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success fs-6">@Model.Stock</span>
+                            }
+                            <small class="text-muted ms-2">警戒值: @Model.LowStockThreshold</small>
+                        </td>
+                    </tr>
+                    <tr><th class="text-muted">狀態</th><td><span class="badge @(Model.IsActive ? "bg-success" : "bg-secondary")">@(Model.IsActive ? "上架中" : "已下架")</span></td></tr>
+                    <tr><th class="text-muted">建立時間</th><td>@Model.CreatedAt.ToString("yyyy/MM/dd")</td></tr>
+                    @if (!string.IsNullOrEmpty(Model.Description))
+                    {
+                        <tr><th class="text-muted">描述</th><td>@Model.Description</td></tr>
+                    }
+                </table>
+            </div>
+        </div>
+        <a asp-controller="Inventory" asp-action="Restock" asp-route-id="@Model.ProductID" class="btn btn-warning">
+            <i class="bi bi-arrow-up-circle me-1"></i>進貨調整
+        </a>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-clock-history me-2"></i>庫存異動紀錄</div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead><tr><th class="px-3">時間</th><th>類型</th><th>數量</th><th>備註</th></tr></thead>
+                    <tbody>
+                        @foreach (var r in Model.StockRecords.OrderByDescending(r => r.CreatedAt).Take(10))
+                        {
+                            <tr>
+                                <td class="px-3 small">@r.CreatedAt.ToString("MM/dd HH:mm")</td>
+                                <td><span class="badge @(r.Type=="In"?"bg-success":r.Type=="Out"?"bg-danger":"bg-warning text-dark")">@(r.Type == "In" ? "進貨" : r.Type == "Out" ? "出貨" : "調整")</span></td>
+                                <td>@(r.Type == "Out" ? "-" : "+")@r.Quantity</td>
+                                <td class="small text-muted">@r.Notes</td>
+                            </tr>
+                        }
+                        @if (!Model.StockRecords.Any())
+                        {
+                            <tr><td colspan="4" class="text-center text-muted py-3">無異動紀錄</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

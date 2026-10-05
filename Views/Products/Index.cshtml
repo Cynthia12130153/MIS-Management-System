@@ -1,0 +1,96 @@
+@model IEnumerable<MIS期末.Models.Product>
+@{ ViewData["Title"] = "商品管理"; }
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-4">
+                <input type="text" name="search" value="@ViewBag.Search" class="form-control form-control-sm" placeholder="搜尋商品名稱..." />
+            </div>
+            <div class="col-md-3">
+                <select name="categoryId" asp-items="@ViewBag.Categories" class="form-select form-select-sm">
+                    <option value="">-- 所有分類 --</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">所有狀態</option>
+                    <option value="active" selected="@(ViewBag.Status == "active")">上架中</option>
+                    <option value="inactive" selected="@(ViewBag.Status == "inactive")">已下架</option>
+                    <option value="lowstock" selected="@(ViewBag.Status == "lowstock")">庫存不足</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search me-1"></i>搜尋</button>
+                <a asp-action="Index" class="btn btn-outline-secondary btn-sm ms-1">重設</a>
+            </div>
+            <div class="col-auto ms-auto">
+                <a asp-action="Create" class="btn btn-success btn-sm"><i class="bi bi-plus-lg me-1"></i>新增商品</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th class="px-3">商品名稱</th>
+                    <th>分類</th>
+                    <th>售價</th>
+                    <th>成本</th>
+                    <th>庫存</th>
+                    <th>狀態</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model)
+                {
+                    <tr>
+                        <td class="px-3">
+                            <div class="fw-semibold">@p.Name</div>
+                            @if (!string.IsNullOrEmpty(p.Description))
+                            {
+                                <small class="text-muted">@(p.Description.Length > 30 ? p.Description[..30] + "..." : p.Description)</small>
+                            }
+                        </td>
+                        <td><span class="badge bg-light text-dark">@p.Category?.Name</span></td>
+                        <td class="text-success fw-bold">NT$@p.Price.ToString("N0")</td>
+                        <td class="text-muted">NT$@p.Cost.ToString("N0")</td>
+                        <td>
+                            @if (p.Stock <= p.LowStockThreshold)
+                            {
+                                <span class="badge bg-danger">@p.Stock <i class="bi bi-exclamation-triangle ms-1"></i></span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-light text-dark">@p.Stock</span>
+                            }
+                        </td>
+                        <td>
+                            @if (p.IsActive)
+                            {
+                                <span class="badge bg-success">上架</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">下架</span>
+                            }
+                        </td>
+                        <td>
+                            <a asp-action="Edit" asp-route-id="@p.ProductID" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil"></i></a>
+                            <a asp-action="Details" asp-route-id="@p.ProductID" class="btn btn-outline-info btn-sm"><i class="bi bi-eye"></i></a>
+                            <a asp-action="Delete" asp-route-id="@p.ProductID" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></a>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="7" class="text-center text-muted py-4">沒有符合的商品</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

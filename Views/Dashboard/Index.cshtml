@@ -1,0 +1,158 @@
+@model MIS期末.Models.ViewModels.DashboardViewModel
+@{ ViewData["Title"] = "儀表板"; }
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card" style="background: linear-gradient(135deg,#1976d2,#42a5f5)">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">今日營業額</div>
+                    <div class="stat-value">NT$@Model.TodayRevenue.ToString("N0")</div>
+                    <small>共 @Model.TodayOrders 筆訂單</small>
+                </div>
+                <i class="bi bi-currency-dollar" style="font-size:2.5rem;opacity:.6"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card" style="background: linear-gradient(135deg,#388e3c,#66bb6a)">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">本月營業額</div>
+                    <div class="stat-value">NT$@Model.MonthRevenue.ToString("N0")</div>
+                    <small>共 @Model.MonthOrders 筆訂單</small>
+                </div>
+                <i class="bi bi-graph-up-arrow" style="font-size:2.5rem;opacity:.6"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card" style="background: linear-gradient(135deg,#f57c00,#ffa726)">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">商品總數</div>
+                    <div class="stat-value">@Model.TotalProducts</div>
+                    @if (Model.LowStockCount > 0)
+                    {
+                        <small class="text-warning fw-bold"><i class="bi bi-exclamation-triangle me-1"></i>@Model.LowStockCount 項庫存不足</small>
+                    }
+                    else
+                    {
+                        <small>庫存充足</small>
+                    }
+                </div>
+                <i class="bi bi-box-seam" style="font-size:2.5rem;opacity:.6"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card" style="background: linear-gradient(135deg,#7b1fa2,#ab47bc)">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">會員總數</div>
+                    <div class="stat-value">@Model.TotalCustomers</div>
+                    <small>累計會員</small>
+                </div>
+                <i class="bi bi-people" style="font-size:2.5rem;opacity:.6"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-bar-chart me-2 text-primary"></i>近7日銷售趨勢</span>
+            </div>
+            <div class="card-body">
+                <canvas id="salesChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-trophy me-2 text-warning"></i>本月熱銷商品</div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    @foreach (var (item, i) in Model.TopProducts.Select((x, i) => (x, i)))
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-3 py-2">
+                            <div>
+                                <span class="badge @(i == 0 ? "bg-warning text-dark" : i == 1 ? "bg-secondary" : "bg-light text-dark") me-2">@(i+1)</span>
+                                <span class="small">@item.ProductName</span>
+                            </div>
+                            <span class="text-muted small">@item.TotalQty 件</span>
+                        </li>
+                    }
+                    @if (!Model.TopProducts.Any())
+                    {
+                        <li class="list-group-item text-center text-muted small py-4">尚無銷售資料</li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history me-2 text-primary"></i>最近訂單</span>
+        <a asp-controller="Orders" asp-action="Index" class="btn btn-outline-primary btn-sm">查看全部</a>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th class="px-3">訂單編號</th>
+                    <th>時間</th>
+                    <th>會員</th>
+                    <th>金額</th>
+                    <th>狀態</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var o in Model.RecentOrders)
+                {
+                    <tr>
+                        <td class="px-3 fw-bold">#@o.OrderID</td>
+                        <td class="text-muted small">@o.OrderDate.ToString("MM/dd HH:mm")</td>
+                        <td>@(o.CustomerName ?? "散客")</td>
+                        <td class="fw-bold text-success">NT$@o.FinalAmount.ToString("N0")</td>
+                        <td><span class="badge @(o.Status == "完成" ? "bg-success" : "bg-secondary")">@o.Status</span></td>
+                        <td><a asp-controller="Orders" asp-action="Details" asp-route-id="@o.OrderID" class="btn btn-outline-secondary btn-sm">詳情</a></td>
+                    </tr>
+                }
+                @if (!Model.RecentOrders.Any())
+                {
+                    <tr><td colspan="6" class="text-center text-muted py-4">尚無訂單紀錄</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const labels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.WeeklySales.Select(x => x.Date)));
+    const data = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.WeeklySales.Select(x => x.Revenue)));
+    new Chart(document.getElementById('salesChart'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '營業額 (NT$)',
+                data: data,
+                backgroundColor: 'rgba(25,118,210,0.7)',
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { callback: v => 'NT$' + v.toLocaleString() } } }
+        }
+    });
+</script>
+}

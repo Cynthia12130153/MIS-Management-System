@@ -1,0 +1,249 @@
+@model MIS期末.Models.ViewModels.CheckoutViewModel
+@{ ViewData["Title"] = "結帳"; }
+
+<div class="row g-3">
+    <!-- 左側：訂單明細 + 會員設定 -->
+    <div class="col-md-7">
+        <div class="card mb-3">
+            <div class="card-header"><i class="bi bi-receipt me-2"></i>訂單明細</div>
+            <div class="card-body p-0">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th class="px-3">商品</th>
+                            <th class="text-center">數量</th>
+                            <th class="text-end">單價</th>
+                            <th class="text-end px-3">小計</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr>
+                                <td class="px-3 fw-semibold">@item.ProductName</td>
+                                <td class="text-center">@item.Quantity</td>
+                                <td class="text-end">NT$@item.Price.ToString("N0")</td>
+                                <td class="text-end px-3 fw-bold text-success">NT$@item.SubTotal.ToString("N0")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr>
+                            <td colspan="3" class="px-3 fw-bold text-end">商品合計</td>
+                            <td class="fw-bold fs-5 text-end px-3">NT$@Model.TotalAmount.ToString("N0")</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><i class="bi bi-person-check me-2"></i>會員設定（選填）</div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">選擇會員</label>
+                    <div class="d-flex gap-2">
+                        <select id="customerSelect" asp-items="@ViewBag.Customers" class="form-select"
+                                onchange="loadCustomer(this.value)">
+                            <option value="">-- 散客（不綁定會員）--</option>
+                        </select>
+                        <a asp-controller="Customers" asp-action="Create"
+                           class="btn btn-outline-success btn-sm text-nowrap">
+                            <i class="bi bi-person-plus me-1"></i>新增
+                        </a>
+                    </div>
+                </div>
+
+                <div id="memberInfo" class="d-none">
+                    <div class="alert alert-info mb-0 py-3">
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <i class="bi bi-person me-1"></i>
+                                <span class="text-muted small">姓名：</span>
+                                <span id="mName" class="fw-bold"></span>
+                            </div>
+                            <div class="col-6">
+                                <i class="bi bi-star me-1"></i>
+                                <span class="text-muted small">等級：</span>
+                                <span id="mLevel" class="fw-bold"></span>
+                            </div>
+                            <div class="col-6">
+                                <i class="bi bi-gift me-1"></i>
+                                <span class="text-muted small">現有點數：</span>
+                                <span id="mPoints" class="fw-bold text-primary"></span> 點
+                            </div>
+                            <div class="col-6">
+                                <i class="bi bi-tag me-1"></i>
+                                <span class="text-muted small">會員折扣：</span>
+                                <span id="mDiscount" class="fw-bold text-success"></span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label small fw-semibold mb-1">
+                                <i class="bi bi-coin me-1"></i>點數折抵
+                                <span class="text-muted fw-normal">（每 100 點折抵 NT$10）</span>
+                            </label>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="input-group input-group-sm" style="max-width:200px">
+                                    <input type="number" id="redeemInput" min="0" step="100"
+                                           class="form-control" value="0" oninput="calcDiscount()" />
+                                    <span class="input-group-text">點</span>
+                                </div>
+                                <span class="small text-muted">可用：<span id="availPoints" class="fw-bold text-primary">0</span> 點</span>
+                                <button type="button" class="btn btn-sm btn-outline-primary"
+                                        onclick="useAllPoints()">全部折抵</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右側：付款 -->
+    <div class="col-md-5">
+        <div class="card sticky-top" style="top:24px">
+            <div class="card-header"><i class="bi bi-calculator me-2"></i>付款明細</div>
+            <div class="card-body">
+                <form asp-action="ProcessCheckout" method="post" id="checkoutForm">
+                    <input type="hidden" id="hCustomerID"     name="CustomerID" />
+                    <input type="hidden" id="hPointsToRedeem" name="PointsToRedeem" value="0" />
+                    <input type="hidden" name="TotalAmount" value="@Model.TotalAmount" />
+
+                    @for (int i = 0; i < Model.Items.Count; i++)
+                    {
+                        <input type="hidden" name="Items[@i].ProductID"   value="@Model.Items[i].ProductID" />
+                        <input type="hidden" name="Items[@i].ProductName" value="@Model.Items[i].ProductName" />
+                        <input type="hidden" name="Items[@i].Price"       value="@Model.Items[i].Price" />
+                        <input type="hidden" name="Items[@i].Quantity"    value="@Model.Items[i].Quantity" />
+                    }
+
+                    <table class="table table-borderless mb-3">
+                        <tr>
+                            <td class="text-muted">商品合計</td>
+                            <td class="text-end fw-bold">NT$@Model.TotalAmount.ToString("N0")</td>
+                        </tr>
+                        <tr id="discountRow" style="display:none" class="text-danger">
+                            <td><i class="bi bi-tag me-1"></i>會員折扣</td>
+                            <td class="text-end" id="discountVal">-NT$0</td>
+                        </tr>
+                        <tr id="pointsRow" style="display:none" class="text-primary">
+                            <td><i class="bi bi-coin me-1"></i>點數折抵</td>
+                            <td class="text-end" id="pointsVal">-NT$0</td>
+                        </tr>
+                        <tr class="fw-bold fs-5 border-top">
+                            <td>實付金額</td>
+                            <td class="text-end text-success" id="finalVal">NT$@Model.TotalAmount.ToString("N0")</td>
+                        </tr>
+                    </table>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">付款方式</label>
+                        <div class="d-grid gap-2">
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="PaymentMethod" id="pay_cash"   value="現金" checked />
+                                <label class="btn btn-outline-success" for="pay_cash">
+                                    <i class="bi bi-cash me-1"></i>現金
+                                </label>
+                                <input type="radio" class="btn-check" name="PaymentMethod" id="pay_card"   value="信用卡" />
+                                <label class="btn btn-outline-primary" for="pay_card">
+                                    <i class="bi bi-credit-card me-1"></i>信用卡
+                                </label>
+                                <input type="radio" class="btn-check" name="PaymentMethod" id="pay_mobile" value="行動支付" />
+                                <label class="btn btn-outline-warning" for="pay_mobile">
+                                    <i class="bi bi-phone me-1"></i>行動支付
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">備註</label>
+                        <input type="text" name="Notes" class="form-control" placeholder="選填備註…" />
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 btn-lg">
+                        <i class="bi bi-check-circle me-2"></i>確認結帳
+                    </button>
+                    <a asp-controller="Sales" asp-action="Index" class="btn btn-outline-secondary w-100 mt-2">
+                        <i class="bi bi-arrow-left me-1"></i>返回修改
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+const totalAmount = @Model.TotalAmount.ToString(System.Globalization.CultureInfo.InvariantCulture);
+let discountRate = 0;
+let availPoints  = 0;
+
+function loadCustomer(id) {
+    document.getElementById('hCustomerID').value = id;
+    if (!id) {
+        document.getElementById('memberInfo').classList.add('d-none');
+        discountRate = 0;
+        availPoints  = 0;
+        calcDiscount();
+        return;
+    }
+    fetch('/Sales/GetCustomerInfo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'customerId=' + id
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (!d.success) return;
+        document.getElementById('mName').textContent    = d.name;
+        document.getElementById('mLevel').textContent   = d.levelName;
+        document.getElementById('mPoints').textContent  = d.points;
+        document.getElementById('availPoints').textContent = d.points;
+        document.getElementById('mDiscount').textContent =
+            d.discountRate > 0 ? d.discountRate + '% OFF' : '無折扣';
+        document.getElementById('memberInfo').classList.remove('d-none');
+
+        discountRate = d.discountRate;
+        availPoints  = d.points;
+
+        const maxRedeem = Math.min(d.points, Math.floor(totalAmount / 10) * 100);
+        document.getElementById('redeemInput').max   = maxRedeem;
+        document.getElementById('redeemInput').value = 0;
+        calcDiscount();
+    })
+    .catch(() => {});
+}
+
+function calcDiscount() {
+    const memberDiscount = Math.round(totalAmount * discountRate / 100);
+    const redeem         = Math.min(parseInt(document.getElementById('redeemInput').value) || 0, availPoints);
+    const pointsDiscount = Math.round(redeem / 10);
+    const final          = Math.max(0, totalAmount - memberDiscount - pointsDiscount);
+
+    document.getElementById('hPointsToRedeem').value  = redeem;
+    document.getElementById('finalVal').textContent   = 'NT$' + Math.round(final).toLocaleString();
+
+    if (memberDiscount > 0) {
+        document.getElementById('discountRow').style.display = '';
+        document.getElementById('discountVal').textContent   = '-NT$' + memberDiscount.toLocaleString();
+    } else {
+        document.getElementById('discountRow').style.display = 'none';
+    }
+
+    if (pointsDiscount > 0) {
+        document.getElementById('pointsRow').style.display = '';
+        document.getElementById('pointsVal').textContent   = '-NT$' + pointsDiscount.toLocaleString();
+    } else {
+        document.getElementById('pointsRow').style.display = 'none';
+    }
+}
+
+function useAllPoints() {
+    const max = Math.min(availPoints, Math.floor(totalAmount / 10) * 100);
+    document.getElementById('redeemInput').value = max;
+    calcDiscount();
+}
+</script>
+}

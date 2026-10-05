@@ -1,0 +1,196 @@
+@model IEnumerable<MIS期末.Models.Product>
+@{ ViewData["Title"] = "銷售 / POS"; }
+
+<div class="row g-3">
+    <!-- 左側：商品列表 -->
+    <div class="col-md-7">
+        <div class="card mb-3">
+            <div class="card-body py-2">
+                <form method="get" class="row g-2 align-items-center">
+                    <div class="col-md-5">
+                        <input type="text" name="search" value="@ViewBag.Search"
+                               class="form-control" placeholder="搜尋商品..." autofocus />
+                    </div>
+                    <div class="col-md-4">
+                        <select name="categoryId" asp-items="@ViewBag.Categories" class="form-select">
+                            <option value="">所有分類</option>
+                        </select>
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="row g-2">
+            @foreach (var p in Model)
+            {
+                <div class="col-md-4 col-6">
+                    <div class="card product-card h-100">
+                        <div class="card-body text-center py-3">
+                            <i class="bi bi-box-seam mb-1" style="font-size:1.8rem;color:#1976d2"></i>
+                            <div class="fw-semibold small mb-1">@p.Name</div>
+                            <div class="text-success fw-bold">NT$@p.Price.ToString("N0")</div>
+                            <div class="text-muted mb-2" style="font-size:.75rem">庫存：@p.Stock</div>
+                            <div class="input-group input-group-sm mb-2">
+                                <button class="btn btn-outline-secondary" type="button"
+                                        onclick="stepQty(this,-1)">−</button>
+                                <input type="number" class="form-control text-center qty-input"
+                                       value="1" min="1" max="@p.Stock" />
+                                <button class="btn btn-outline-secondary" type="button"
+                                        onclick="stepQty(this,1)">＋</button>
+                            </div>
+                            <button type="button" class="btn btn-primary btn-sm w-100"
+                                    data-pid="@p.ProductID"
+                                    data-pname="@p.Name"
+                                    data-price="@p.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                    onclick="addToCartBtn(this)">
+                                <i class="bi bi-cart-plus me-1"></i>加入購物車
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+            @if (!Model.Any())
+            {
+                <div class="col-12 text-center text-muted py-4">無符合商品</div>
+            }
+        </div>
+    </div>
+
+    <!-- 右側：購物車（純 JS，不依賴 Server 狀態） -->
+    <div class="col-md-5" id="cartCol">
+        <div class="card sticky-top" style="top:24px" id="cartBox"></div>
+    </div>
+</div>
+
+<style>
+.product-card { transition: transform .15s, box-shadow .15s; }
+.product-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(25,118,210,.2); border-color: #1976d2; }
+</style>
+
+@section Scripts {
+<script>
+var cart = [];
+
+function stepQty(btn, delta) {
+    var inp = btn.closest('.input-group').querySelector('.qty-input');
+    var max = parseInt(inp.max) || 999;
+    inp.value = Math.min(max, Math.max(1, (parseInt(inp.value) || 1) + delta));
+}
+
+function addToCartBtn(btn) {
+    var body  = btn.closest('.card-body');
+    var qty   = parseInt(body.querySelector('.qty-input').value) || 1;
+    var pid   = parseInt(btn.dataset.pid);
+    var pname = btn.dataset.pname;
+    var price = parseFloat(btn.dataset.price);
+
+    var found = cart.find(function(i) { return i.ProductID === pid; });
+    if (found) { found.Quantity += qty; }
+    else        { cart.push({ ProductID: pid, ProductName: pname, Price: price, Quantity: qty }); }
+    renderCart();
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>已加入！';
+    btn.classList.replace('btn-primary', 'btn-success');
+    setTimeout(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-cart-plus me-1"></i>加入購物車';
+        btn.classList.replace('btn-success', 'btn-primary');
+    }, 1200);
+    body.querySelector('.qty-input').value = 1;
+    document.getElementById('cartCol').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function updateCartQty(pid, qty) {
+    var item = cart.find(function(i) { return i.ProductID === pid; });
+    if (!item) return;
+    item.Quantity = Math.max(1, qty);
+    renderCart();
+}
+
+function removeFromCart(pid) {
+    cart = cart.filter(function(i) { return i.ProductID !== pid; });
+    renderCart();
+}
+
+function clearCart() {
+    if (!confirm('確定清空購物車？')) return;
+    cart = [];
+    renderCart();
+}
+
+function renderCart() {
+    var totalQty = cart.reduce(function(s, i) { return s + i.Quantity; }, 0);
+    var total    = cart.reduce(function(s, i) { return s + i.Price * i.Quantity; }, 0);
+    var h = '';
+
+    h += '<div class="card-header d-flex justify-content-between align-items-center">';
+    h += '<span><i class="bi bi-cart3 me-2"></i>購物車';
+    if (cart.length > 0) h += '<span class="badge bg-primary ms-1">' + totalQty + '</span>';
+    h += '</span>';
+    h += '<button class="btn btn-outline-danger btn-sm" onclick="clearCart()">'
+       + '<i class="bi bi-trash me-1"></i>清空</button></div>';
+
+    h += '<div class="card-body p-0"><div style="max-height:420px;overflow-y:auto">';
+    if (cart.length === 0) {
+        h += '<div class="text-center text-muted py-5">'
+           + '<i class="bi bi-cart-x" style="font-size:2.5rem"></i>'
+           + '<div class="mt-2">購物車是空的</div></div>';
+    } else {
+        cart.forEach(function(item) {
+            var sub = item.Price * item.Quantity;
+            h += '<div class="border-bottom px-3 py-2 d-flex align-items-center gap-2">'
+               + '<div class="flex-grow-1 overflow-hidden">'
+               + '<div class="small fw-semibold text-truncate">' + item.ProductName + '</div>'
+               + '<div class="text-muted" style="font-size:.75rem">NT$' + item.Price.toLocaleString() + ' / 個</div>'
+               + '</div>'
+               + '<div class="d-flex align-items-center gap-1">'
+               + '<button class="btn btn-outline-secondary btn-sm px-2" onclick="updateCartQty(' + item.ProductID + ',' + (item.Quantity - 1) + ')">−</button>'
+               + '<span class="fw-bold px-1" style="min-width:28px;text-align:center">' + item.Quantity + '</span>'
+               + '<button class="btn btn-outline-secondary btn-sm px-2" onclick="updateCartQty(' + item.ProductID + ',' + (item.Quantity + 1) + ')">＋</button>'
+               + '</div>'
+               + '<div class="fw-bold text-success text-nowrap" style="min-width:70px;text-align:right">NT$' + Math.round(sub).toLocaleString() + '</div>'
+               + '<button class="btn btn-sm btn-outline-danger" onclick="removeFromCart(' + item.ProductID + ')">'
+               + '<i class="bi bi-trash"></i></button>'
+               + '</div>';
+        });
+    }
+    h += '</div></div>';
+
+    h += '<div class="card-footer">'
+       + '<div class="d-flex justify-content-between fw-bold fs-5 mb-3"><span>合計</span>'
+       + '<span class="text-success">NT$' + Math.round(total).toLocaleString() + '</span></div>';
+    if (cart.length > 0) {
+        h += '<button type="button" class="btn btn-primary w-100 btn-lg" onclick="goCheckout()">'
+           + '<i class="bi bi-credit-card me-2"></i>前往結帳</button>';
+    } else {
+        h += '<button type="button" class="btn btn-secondary w-100 btn-lg" disabled>'
+           + '<i class="bi bi-credit-card me-2"></i>前往結帳</button>';
+    }
+    h += '</div>';
+
+    document.getElementById('cartBox').innerHTML = h;
+}
+
+function goCheckout() {
+    if (cart.length === 0) return;
+    var form  = document.createElement('form');
+    form.method = 'post';
+    form.action = '/Sales/Checkout';
+    var inp = document.createElement('input');
+    inp.type  = 'hidden';
+    inp.name  = 'cartJson';
+    inp.value = JSON.stringify(cart);
+    form.appendChild(inp);
+    document.body.appendChild(form);
+    form.submit();
+}
+
+renderCart();
+</script>
+}

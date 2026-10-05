@@ -1,0 +1,88 @@
+@model IEnumerable<MIS期末.Models.Order>
+@{ ViewData["Title"] = "訂單管理"; }
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-2">
+                <input type="date" name="startDate" value="@ViewBag.StartDate" class="form-control form-control-sm" />
+            </div>
+            <div class="col-auto text-muted">~</div>
+            <div class="col-md-2">
+                <input type="date" name="endDate" value="@ViewBag.EndDate" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-3">
+                <input type="text" name="search" value="@ViewBag.Search" class="form-control form-control-sm" placeholder="訂單編號或會員姓名..." />
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search me-1"></i>查詢</button>
+                <a asp-action="Index" class="btn btn-outline-secondary btn-sm ms-1">重設</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="card text-center py-2">
+            <div class="small text-muted">訂單筆數</div>
+            <div class="fw-bold fs-4">@Model.Count()</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center py-2">
+            <div class="small text-muted">總營業額</div>
+            <div class="fw-bold fs-4 text-success">NT$@Model.Where(o=>o.Status=="完成").Sum(o => o.FinalAmount).ToString("N0")</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center py-2">
+            <div class="small text-muted">平均客單價</div>
+            <div class="fw-bold fs-4">NT$@(Model.Any(o=>o.Status=="完成") ? Model.Where(o=>o.Status=="完成").Average(o => o.FinalAmount).ToString("N0") : "0")</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center py-2">
+            <div class="small text-muted">取消訂單</div>
+            <div class="fw-bold fs-4 text-danger">@Model.Count(o=>o.Status=="已取消")</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th class="px-3">訂單編號</th>
+                    <th>日期時間</th>
+                    <th>會員</th>
+                    <th>項目數</th>
+                    <th>付款方式</th>
+                    <th>實付金額</th>
+                    <th>狀態</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var o in Model)
+                {
+                    <tr>
+                        <td class="px-3 fw-bold">#@o.OrderID</td>
+                        <td class="text-muted small">@o.OrderDate.ToString("yyyy/MM/dd HH:mm")</td>
+                        <td>@(o.Customer?.Name ?? "<span class='text-muted'>散客</span>")</td>
+                        <td>@o.OrderDetails.Count 項</td>
+                        <td><span class="badge bg-light text-dark">@o.PaymentMethod</span></td>
+                        <td class="fw-bold @(o.Status=="完成"?"text-success":"text-muted")">NT$@o.FinalAmount.ToString("N0")</td>
+                        <td><span class="badge @(o.Status=="完成"?"bg-success":"bg-secondary")">@o.Status</span></td>
+                        <td><a asp-action="Details" asp-route-id="@o.OrderID" class="btn btn-outline-primary btn-sm">詳情</a></td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="8" class="text-center text-muted py-4">查無訂單</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
